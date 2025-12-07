@@ -28,3 +28,23 @@ app_requests_total{app="app-a",endpoint="/"} 4.0
 
 ajustando a identificar o que faz aquela métrica
 no exemplo acima eu tinha acessado 4 vezes o app-a, para gerar métricas
+
+
+- Lá no app.py é necessário importar:
+from otel.metrics import requests_counter
+
+- E adicionar no código o trecho para contabilizar +1 e adicionar labels:
+
+~~~~py
+@app.get("/")
+def read_root():
+    requests_counter.add(1, {"app": config.APP_NAME, "endpoint": "/"})
+    return {"message": f"Esse é o serviço {config.APP_NAME}"}
+~~~~
+
+
+- Também é possível fazer o mesmo para o path /process, instrumentando o contador:
+
+~~~~py
+requests_counter.add(1, {"app": config.APP_NAME, "endpoint": "/process"})
+~~~~
