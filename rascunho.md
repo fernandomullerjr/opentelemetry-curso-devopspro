@@ -1,6 +1,10 @@
-rascunho.md
 
+## rascunho.md
 
+## ambiente
+```bash
+docker compose up --build
+```
 
 https://plataforma.devopspro.com.br/courses/af00ffe1-1d2f-4dce-9a19-780e59273907/2/1/42/conteudos?capitulo=42&conteudo=1232
 
