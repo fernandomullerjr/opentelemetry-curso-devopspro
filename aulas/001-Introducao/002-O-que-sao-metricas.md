@@ -6,3 +6,7 @@ Counter
 Gauge
 Histogram
 Summary
+
+
+- Ponto importante:
+o OpenTelemtry não tem o tipo "Summary"
