@@ -19,7 +19,6 @@ import config
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 
-
 # Nome da aplicação - usado para identificar de qual serviço vêm as métricas
 APP_NAME = os.getenv("APP_NAME", "app-a")
 

@@ -3,6 +3,7 @@
 
 ## ambiente
 ```bash
+cd /home/fernando/cursos/opentelemetry/opentelemetry-curso-devopspro/app-telemetria
 docker compose up --build
 ```
 
@@ -149,3 +150,10 @@ testar ambiente
 ```bash
 docker-compose up --build
 ```
+
+
+
+
+
+
+- Seguir nas aulas adiante, conforme Markdown por aulas.

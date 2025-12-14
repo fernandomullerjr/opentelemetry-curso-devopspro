@@ -48,3 +48,55 @@ def read_root():
 ~~~~py
 requests_counter.add(1, {"app": config.APP_NAME, "endpoint": "/process"})
 ~~~~
+
+
+
+## Dia 14/12/2025
+
+### Assincrono
+
+- Para adicionar um counter assincrono e com valores aleatórios:
+
+~~~~py
+from typing import Iterable
+from opentelemetry.metrics import CallbackOptions, Observation
+
+# =============================================================================
+# OBSERVABLE COUNTER (CONTADOR OBSERVÁVEL) - MÉTRICA COM CALLBACK
+# =============================================================================
+# Observable Counter: Valor calculado dinamicamente através de uma função callback
+# Útil quando você não pode incrementar manualmente, mas pode calcular o valor atual
+
+def get_random_value(options: CallbackOptions) -> Iterable[Observation]:
+    """
+    Callback function que gera um valor aleatório
+    Esta função é chamada automaticamente pelo OpenTelemetry para coletar a métrica
+    """
+    random_value = random.randint(1, 100)
+    # Observation: Representa uma observação da métrica com valor e atributos
+    yield Observation(
+        random_value,                    # Valor da métrica
+        {"service": APP_NAME}           # Atributos (labels) para categorização
+    )
+
+# Criação do observable counter com a função callback
+random_counter = meter.create_observable_counter(
+    name="app_random_value",
+    description="Contador de valores aleatórios",
+    callbacks=[get_random_value],       # Lista de funções que calculam o valor
+)
+
+~~~~
+
+
+
+- No endpoint http://localhost:8000/metrics
+são gerados:
+
+# TYPE app_random_value_total counter
+app_random_value_total{service="app-a"} 76.0
+
+ao atualizar a página:
+
+# TYPE app_random_value_total counter
+app_random_value_total{service="app-a"} 84.0
