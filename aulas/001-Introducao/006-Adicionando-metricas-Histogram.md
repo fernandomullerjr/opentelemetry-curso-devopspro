@@ -50,3 +50,34 @@ elapsed_time = time.time() - start_time
 ~~~~
 
 para obter o tempo de duração do processamento
+
+
+
+    start_time = time.time()
+    elapsed_time = time.time() - start_time
+    response_time_histogram.record(elapsed_time, {"app": config.APP_NAME, "endpoint": "/"})
+
+
+# TYPE app_response_time_seconds histogram
+app_response_time_seconds_bucket{app="app-a",endpoint="/",le="0.005"} 10.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/",le="0.01"} 10.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/",le="0.025"} 10.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/",le="0.05"} 10.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/",le="0.1"} 10.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/",le="0.25"} 10.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/",le="0.5"} 10.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/",le="+Inf"} 10.0
+
+
+
+- Simulando no path /process com APP_LATENCY=250
+
+
+app_response_time_seconds_bucket{app="app-a",endpoint="/process",le="0.005"} 0.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/process",le="0.01"} 0.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/process",le="0.025"} 0.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/process",le="0.05"} 0.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/process",le="0.1"} 0.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/process",le="0.25"} 0.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/process",le="0.5"} 5.0
+app_response_time_seconds_bucket{app="app-a",endpoint="/process",le="+Inf"} 5.0
