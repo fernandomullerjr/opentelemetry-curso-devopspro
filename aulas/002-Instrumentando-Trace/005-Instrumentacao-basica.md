@@ -131,3 +131,38 @@ processor_console = BatchSpanProcessor(ConsoleSpanExporter())
 ~~~~
 
 
+- Configurando o processador, para onde iremos enviar os Spans.
+- É possível setar mais de um Processor, ex: enviar para a Console e para o Sistema de Observabilidade.
+- Na configuração abaixo foi setado para enviar para o Sistema de Observabilidade:
+
+~~~~py
+# =============================================================================
+# CONFIGURAÇÃO DOS PROCESSADORES
+# =============================================================================
+# Comentado o processador de console para não poluir o terminal
+# provider.add_span_processor(processor_console)
+
+# Adiciona o processador OTLP que enviará os traces para o sistema de observabilidade
+provider.add_span_processor(processor_otlp)
+~~~~
+
+
+- Configuração do Tracer, que é necessário com o nome:
+
+~~~~py
+# =============================================================================
+# TRACER - INSTRUMENTO PRINCIPAL PARA CRIAR SPANS
+# =============================================================================
+# Tracer: É o instrumento principal para criar spans (segmentos de trace)
+# Cada serviço deve ter seu próprio tracer identificado pelo nome
+tracer = trace.get_tracer(APP_NAME)
+~~~~
+
+
+
+
+## PENDENTE
+- COntinua em:
+16:01min
+na parte de configuração do primeiro span
+"with tracer.start_as_current_span("process-request", context=context) as main_span:"
