@@ -5,7 +5,7 @@ services:
       context: ./src
       dockerfile: ./Dockerfile
     ports:
-      - "8000:8000"
+      - "8000:8000"  # API HTTP principal
     environment:
       - APP_NAME=app-a
       - APP_URL_DESTINO=http://app-b:8000,http://app-c:8000
@@ -22,7 +22,7 @@ services:
       context: ./src
       dockerfile: ./Dockerfile
     ports:
-      - "8001:8000"
+      - "8001:8000"  # API HTTP app-b
     environment:
       - APP_NAME=app-b
       - APP_URL_DESTINO=http://app-c:8000
@@ -39,7 +39,7 @@ services:
       context: ./src
       dockerfile: ./Dockerfile
     ports:
-      - "8002:8000"
+      - "8002:8000"  # API HTTP app-c
     environment:
       - APP_NAME=app-c
       - APP_ERRORS=15
@@ -55,11 +55,11 @@ services:
     image: jaegertracing/all-in-one:latest
     container_name: jaeger
     ports:
-      - "16686:16686"  # UI
-      - "14250:14250"  # Model used by collector
-      - "14268:14268"  # HTTP accept directly from clients
-      - "6831:6831/udp"  # Accept jaeger.thrift in compact Thrift protocol over UDP
-      - "6832:6832/udp"  # Accept jaeger.thrift in binary Thrift protocol over UDP
+      - "16686:16686"   # UI Web do Jaeger
+      - "14250:14250"   # gRPC para collector
+      - "14268:14268"   # HTTP direto de clientes
+      - "6831:6831/udp" # Jaeger Thrift compact UDP
+      - "6832:6832/udp" # Jaeger Thrift binary UDP
     environment:
       - COLLECTOR_ZIPKIN_HOST_PORT=:9411
     networks:
@@ -70,7 +70,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
-      - "9090:9090"
+      - "9090:9090"  # UI Web do Prometheus
     volumes:
       - ./.docker/prometheus.yaml:/etc/prometheus/prometheus.yml
     command:
@@ -84,7 +84,7 @@ services:
   loki:
     image: grafana/loki:latest
     ports:
-      - "3100:3100"
+      - "3100:3100"  # API HTTP do Loki
     command: -config.file=/etc/loki/local-config.yaml
     networks:
       - app-network
@@ -136,7 +136,7 @@ services:
         /run.sh
     image: grafana/grafana:latest
     ports:
-      - "3000:3000"
+      - "3000:3000"  # UI Web do Grafana
     networks:
       - app-network    
     depends_on:
@@ -150,9 +150,9 @@ services:
     volumes:
       - ./.docker/collector.yaml:/etc/otel-collector-config.yaml
     ports:
-      - "4318:4318"
-      - "4317:4317"
-      - "8889:8889"
+      - "4318:4318"  # OTLP HTTP receiver
+      - "4317:4317"  # OTLP gRPC receiver
+      - "8889:8889"  # Prometheus metrics endpoint
     networks:
       - app-network
     depends_on:
