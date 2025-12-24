@@ -166,3 +166,316 @@ tracer = trace.get_tracer(APP_NAME)
 16:01min
 na parte de configuração do primeiro span
 "with tracer.start_as_current_span("process-request", context=context) as main_span:"
+
+
+
+## Dia 24/12/2025
+
+- COntinua em:
+16:01min
+
+
+Lá no arquivo "opentelemetry-curso-devopspro/app-telemetria/src/app.py"
+tem o trecho onde é configurado o Span principal:
+
+~~~~py
+
+    with tracer.start_as_current_span("process-request", context=context) as main_span:
+
+### Restante do código ...
+~~~~
+
+
+
+Lá no arquivo "opentelemetry-curso-devopspro/app-telemetria/src/app.py"
+tem o trecho onde é configurado o Span filho também:
+
+~~~~py
+
+                with tracer.start_as_current_span("send-request") as child_span:
+
+                    try:
+                        # Log do início da requisição externa
+                        logger.debug(
+                            "Enviando requisição para serviço downstream",
+                            extra={
+                                **log_context,
+                                "destination_url": url,
+                                "request_method": "POST",
+                                "request_path": "/process"
+                            }
+                        )
+
+                        headers = {}
+                        propagator.inject(headers)
+
+                        child_span.set_attribute("net.peer.name", url)
+                        child_span.set_attribute("destination.url", url)
+
+                        child_span.add_event("Requisição externa bem-sucedida", {"url": url})
+
+                        resp = requests.post(
+                            f"{url}/process",
+                            json=original_payload,
+                            headers=headers,
+                            timeout=5
+                        )
+
+                        child_span.set_attribute("http.status_code", resp.status_code)
+
+~~~~
+
+
+
+
+
+- Gerada request via:
+opentelemetry-curso-devopspro/app-telemetria/teste_request.http
+
+~~~~sh
+HTTP/1.1 200 OK
+date: Wed, 24 Dec 2025 20:06:49 GMT
+server: uvicorn
+content-length: 33
+content-type: application/json
+connection: close
+
+[
+  "app-a",
+  "app-b",
+  "app-c",
+  "app-c"
+]
+~~~~
+
+
+- Verificando os logs do Container do app-a:
+
+~~~~bash
+
+> docker compose logs app-a
+app-a-1  | INFO:     Started server process [1]
+app-a-1  | INFO:     Waiting for application startup.
+app-a-1  | INFO:     Application startup complete.
+app-a-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+app-a-1  | INFO:     172.19.0.1:46454 - "GET /process HTTP/1.1" 405 Method Not Allowed
+app-a-1  | INFO:     172.19.0.1:46456 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+app-a-1  | INFO:     172.19.0.1:46454 - "GET /metrics HTTP/1.1" 200 OK
+app-a-1  | {
+app-a-1  |     "body": "Endpoint raiz acessado",
+app-a-1  |     "severity_number": 9,
+app-a-1  |     "severity_text": "INFO",
+app-a-1  |     "attributes": {
+app-a-1  |         "service_name": "app-a",
+app-a-1  |         "endpoint": "/",
+app-a-1  |         "operation": "health_check",
+app-a-1  |         "code.file.path": "/app/app.py",
+app-a-1  |         "code.function.name": "read_root",
+app-a-1  |         "code.line.number": 26
+app-a-1  |     },
+app-a-1  |     "dropped_attributes": 0,
+app-a-1  |     "timestamp": "2025-12-24T19:43:08.343987Z",
+app-a-1  |     "observed_timestamp": "2025-12-24T19:43:08.344109Z",
+app-a-1  |     "trace_id": "0x00000000000000000000000000000000",
+app-a-1  |     "span_id": "0x0000000000000000",
+app-a-1  |     "trace_flags": 0,
+app-a-1  |     "resource": {
+app-a-1  |         "attributes": {
+app-a-1  |             "telemetry.sdk.language": "python",
+app-a-1  |             "telemetry.sdk.name": "opentelemetry",
+app-a-1  |             "telemetry.sdk.version": "1.34.1",
+app-a-1  |             "service.name": "app-a",
+app-a-1  |             "service.version": "1.0.0"
+app-a-1  |         },
+app-a-1  |         "schema_url": ""
+app-a-1  |     }
+app-a-1  | }
+app-a-1  | INFO:     172.19.0.1:46454 - "GET / HTTP/1.1" 200 OK
+app-a-1  | INFO:     172.19.0.1:46456 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+app-a-1  | {
+app-a-1  |     "body": "Iniciando processamento de requisi\u00e7\u00e3o",
+app-a-1  |     "severity_number": 9,
+app-a-1  |     "severity_text": "INFO",
+app-a-1  |     "attributes": {
+app-a-1  |         "service_name": "app-a",
+app-a-1  |         "operation": "process_request",
+app-a-1  |         "payload": [],
+app-a-1  |         "payload_size": 0,
+app-a-1  |         "app_config": {
+app-a-1  |             "error_rate": 5,
+app-a-1  |             "max_latency": 100,
+app-a-1  |             "destinations": [
+app-a-1  |                 "http://app-b:8000",
+app-a-1  |                 "http://app-c:8000"
+app-a-1  |             ]
+app-a-1  |         },
+app-a-1  |         "code.file.path": "/app/app.py",
+app-a-1  |         "code.function.name": "process_request",
+app-a-1  |         "code.line.number": 80
+app-a-1  |     },
+app-a-1  |     "dropped_attributes": 0,
+app-a-1  |     "timestamp": "2025-12-24T20:06:49.508117Z",
+app-a-1  |     "observed_timestamp": "2025-12-24T20:06:49.508226Z",
+app-a-1  |     "trace_id": "0x00000000000000000000000000000000",
+app-a-1  |     "span_id": "0x0000000000000000",
+app-a-1  |     "trace_flags": 0,
+app-a-1  |     "resource": {
+app-a-1  |         "attributes": {
+app-a-1  |             "telemetry.sdk.language": "python",
+app-a-1  |             "telemetry.sdk.name": "opentelemetry",
+app-a-1  |             "telemetry.sdk.version": "1.34.1",
+app-a-1  |             "service.name": "app-a",
+app-a-1  |             "service.version": "1.0.0"
+app-a-1  |         },
+app-a-1  |         "schema_url": ""
+app-a-1  |     }
+app-a-1  | }
+app-a-1  | 2025-12-24 20:06:49,510 - opentelemetry.attributes - 1 - WARNING - Invalid type HttpRequestMethodValues for attribute 'http.request.method' value. Expected one of ['bool', 'str', 'bytes', 'int', 'float'] or a sequence of those types
+app-a-1  | {
+app-a-1  |     "body": "Iniciando propaga\u00e7\u00e3o para servi\u00e7os downstream",
+app-a-1  |     "severity_number": 9,
+app-a-1  |     "severity_text": "INFO",
+app-a-1  |     "attributes": {
+app-a-1  |         "service_name": "app-a",
+app-a-1  |         "operation": "process_request",
+app-a-1  |         "destination_urls": [
+app-a-1  |             "http://app-b:8000",
+app-a-1  |             "http://app-c:8000"
+app-a-1  |         ],
+app-a-1  |         "destinations_count": 2,
+app-a-1  |         "payload_to_send": [
+app-a-1  |             "app-a"
+app-a-1  |         ],
+app-a-1  |         "code.file.path": "/app/app.py",
+app-a-1  |         "code.function.name": "process_request",
+app-a-1  |         "code.line.number": 185
+app-a-1  |     },
+app-a-1  |     "dropped_attributes": 0,
+app-a-1  |     "timestamp": "2025-12-24T20:06:49.565143Z",
+app-a-1  |     "observed_timestamp": "2025-12-24T20:06:49.565185Z",
+app-a-1  |     "trace_id": "0xa53456b679eb3442e53ca118f78b8caf",
+app-a-1  |     "span_id": "0x347a825f57032c9c",
+app-a-1  |     "trace_flags": 1,
+app-a-1  |     "resource": {
+app-a-1  |         "attributes": {
+app-a-1  |             "telemetry.sdk.language": "python",
+app-a-1  |             "telemetry.sdk.name": "opentelemetry",
+app-a-1  |             "telemetry.sdk.version": "1.34.1",
+app-a-1  |             "service.name": "app-a",
+app-a-1  |             "service.version": "1.0.0"
+app-a-1  |         },
+app-a-1  |         "schema_url": ""
+app-a-1  |     }
+app-a-1  | }
+app-a-1  | {
+app-a-1  |     "body": "Requisi\u00e7\u00e3o externa bem-sucedida",
+app-a-1  |     "severity_number": 9,
+app-a-1  |     "severity_text": "INFO",
+app-a-1  |     "attributes": {
+app-a-1  |         "service_name": "app-a",
+app-a-1  |         "operation": "process_request",
+app-a-1  |         "destination_url": "http://app-b:8000",
+app-a-1  |         "response_status": 200,
+app-a-1  |         "payload_sent": [
+app-a-1  |             "app-a",
+app-a-1  |             "app-b",
+app-a-1  |             "app-c"
+app-a-1  |         ],
+app-a-1  |         "code.file.path": "/app/app.py",
+app-a-1  |         "code.function.name": "process_request",
+app-a-1  |         "code.line.number": 232
+app-a-1  |     },
+app-a-1  |     "dropped_attributes": 0,
+app-a-1  |     "timestamp": "2025-12-24T20:06:49.836700Z",
+app-a-1  |     "observed_timestamp": "2025-12-24T20:06:49.836749Z",
+app-a-1  |     "trace_id": "0xa53456b679eb3442e53ca118f78b8caf",
+app-a-1  |     "span_id": "0xf72e5c478b7d1fc2",
+app-a-1  |     "trace_flags": 1,
+app-a-1  |     "resource": {
+app-a-1  |         "attributes": {
+app-a-1  |             "telemetry.sdk.language": "python",
+app-a-1  |             "telemetry.sdk.name": "opentelemetry",
+app-a-1  |             "telemetry.sdk.version": "1.34.1",
+app-a-1  |             "service.name": "app-a",
+app-a-1  |             "service.version": "1.0.0"
+app-a-1  |         },
+app-a-1  |         "schema_url": ""
+app-a-1  |     }
+app-a-1  | }
+app-a-1  | {
+app-a-1  |     "body": "Requisi\u00e7\u00e3o externa bem-sucedida",
+app-a-1  |     "severity_number": 9,
+app-a-1  |     "severity_text": "INFO",
+app-a-1  |     "attributes": {
+app-a-1  |         "service_name": "app-a",
+app-a-1  |         "operation": "process_request",
+app-a-1  |         "destination_url": "http://app-c:8000",
+app-a-1  |         "response_status": 200,
+app-a-1  |         "payload_sent": [
+app-a-1  |             "app-a",
+app-a-1  |             "app-b",
+app-a-1  |             "app-c",
+app-a-1  |             "app-c"
+app-a-1  |         ],
+app-a-1  |         "code.file.path": "/app/app.py",
+app-a-1  |         "code.function.name": "process_request",
+app-a-1  |         "code.line.number": 232
+app-a-1  |     },
+app-a-1  |     "dropped_attributes": 0,
+app-a-1  |     "timestamp": "2025-12-24T20:06:49.894578Z",
+app-a-1  |     "observed_timestamp": "2025-12-24T20:06:49.894622Z",
+app-a-1  |     "trace_id": "0xa53456b679eb3442e53ca118f78b8caf",
+app-a-1  |     "span_id": "0x4268474eed995d71",
+app-a-1  |     "trace_flags": 1,
+app-a-1  |     "resource": {
+app-a-1  |         "attributes": {
+app-a-1  |             "telemetry.sdk.language": "python",
+app-a-1  |             "telemetry.sdk.name": "opentelemetry",
+app-a-1  |             "telemetry.sdk.version": "1.34.1",
+app-a-1  |             "service.name": "app-a",
+app-a-1  |             "service.version": "1.0.0"
+app-a-1  |         },
+app-a-1  |         "schema_url": ""
+app-a-1  |     }
+app-a-1  | }
+app-a-1  | {
+app-a-1  |     "body": "Processamento concluido com sucesso",
+app-a-1  |     "severity_number": 9,
+app-a-1  |     "severity_text": "INFO",
+app-a-1  |     "attributes": {
+app-a-1  |         "service_name": "app-a",
+app-a-1  |         "operation": "process_request",
+app-a-1  |         "result_payload": [
+app-a-1  |             "app-a",
+app-a-1  |             "app-b",
+app-a-1  |             "app-c",
+app-a-1  |             "app-c"
+app-a-1  |         ],
+app-a-1  |         "processing_duration": 0.38544535636901855,
+app-a-1  |         "latency_simulation": 100,
+app-a-1  |         "destinations_count": 2,
+app-a-1  |         "code.file.path": "/app/app.py",
+app-a-1  |         "code.function.name": "process_request",
+app-a-1  |         "code.line.number": 281
+app-a-1  |     },
+app-a-1  |     "dropped_attributes": 0,
+app-a-1  |     "timestamp": "2025-12-24T20:06:49.896056Z",
+app-a-1  |     "observed_timestamp": "2025-12-24T20:06:49.896079Z",
+app-a-1  |     "trace_id": "0xa53456b679eb3442e53ca118f78b8caf",
+app-a-1  |     "span_id": "0x347a825f57032c9c",
+app-a-1  |     "trace_flags": 1,
+app-a-1  |     "resource": {
+app-a-1  |         "attributes": {
+app-a-1  |             "telemetry.sdk.language": "python",
+app-a-1  |             "telemetry.sdk.name": "opentelemetry",
+app-a-1  |             "telemetry.sdk.version": "1.34.1",
+app-a-1  |             "service.name": "app-a",
+app-a-1  |             "service.version": "1.0.0"
+app-a-1  |         },
+app-a-1  |         "schema_url": ""
+app-a-1  |     }
+app-a-1  | }
+app-a-1  | INFO:     172.19.0.1:53994 - "POST /process HTTP/1.1" 200 OK
+
+ ~/cursos/op/opentelemetry-curso-devopspro/app-telemetria  main !1   
+~~~~
