@@ -250,6 +250,7 @@ connection: close
 
 
 - Verificando os logs do Container do app-a:
+temos detalhes do trace e span
 
 ~~~~bash
 
@@ -479,3 +480,11 @@ app-a-1  | INFO:     172.19.0.1:53994 - "POST /process HTTP/1.1" 200 OK
 
  ~/cursos/op/opentelemetry-curso-devopspro/app-telemetria  main !1   
 ~~~~
+
+
+
+- É possível verificar que o Trace traz informações como:
+Attributes
+service.name
+service.version
+opentelemetry
