@@ -169,5 +169,34 @@ SimpleLogRecordProcessor  SimpleLogRecordProcessor
 
 
 
+- Este trecho registra um log estruturado quando o endpoint raiz é acessado:
+
+```python
+logger.info(
+    "Endpoint raiz acessado",  # Mensagem principal
+    extra={                     # Campos estruturados adicionais
+        "service_name": config.APP_NAME,
+        "endpoint": "/",
+        "operation": "health_check"
+    }
+)
+```
+
+**O que acontece:**
+- `logger.info()`: emite log de nível INFO
+- `extra={}`: adiciona campos personalizados ao LogRecord do OpenTelemetry
+- Esses campos aparecem como atributos estruturados no backend (não apenas na mensagem de texto)
+
+**Resultado:**
+- Console: mensagem formatada pelo `logging.basicConfig`
+- OTLP/collector: LogRecord com `service.name`, `endpoint` e `operation` como atributos pesquisáveis/filtráveis
+
+**Benefício:** permite queries como "mostre todos os logs da operation=health_check" no seu sistema de observabilidade.
+
+
+
+
+
+
 ### IMPORTANTE
 - Lembrar sobre a importancia de criar o bloco do Resource, pois ajuda a identificar a origem dos logs.
