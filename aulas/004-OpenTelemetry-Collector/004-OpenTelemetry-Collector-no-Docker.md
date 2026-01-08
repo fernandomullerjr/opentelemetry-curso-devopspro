@@ -92,3 +92,42 @@ Documentação do Prometheus indica usar o endpoint do próprio Prometheus ao in
 
 ## CONTINUA EM:
 16:01min
+
+
+
+- Pode ser interessante adicionar o Exporter de debug e configurar ele no pipeline
+
+~~~~yaml
+exporters:
+  debug:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+  otlphttp:
+    endpoint: http://loki:3100/otlp
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus, debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp, debug]
+~~~~
+
+
+
+tenho grafana no docker
+mas ao abrir http://localhost:3000
+ta abrindo o portal do open webui, mas ele ta parado
+verificar porque abre ele 
