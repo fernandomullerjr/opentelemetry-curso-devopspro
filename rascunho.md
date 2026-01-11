@@ -1,11 +1,45 @@
 
 ## rascunho.md
 
-## ambiente
+## ambiente via Docker
 ```bash
 cd /home/fernando/cursos/opentelemetry/opentelemetry-curso-devopspro/app-telemetria
 docker compose up --build
 ```
+
+### COMANDOS ÚTEIS NO MINIKUBE:
+
+~~~~BASH
+## Abrir Dashboard do k8s
+minikube dashboard
+
+## Ativar o tunnel
+minikube tunnel
+
+## Fornecer url e porta para acessar o serviço, OBS: Gera porta aleatória acessível
+minikube service app-a --url
+minikube service grafana --url
+~~~~
+
+### COMANDOS PARA SUBIR APP E TOOL VIA K8S
+
+- Comando para aplicar os manifestos no Kubernetes:
+
+~~~~bash
+cd /home/fernando/cursos/opentelemetry/opentelemetry-curso-devopspro/app-telemetria
+
+kubectl apply -f k8s/ -R
+~~~~
+
+
+### Comando Helm para subir OTEL COLLECTOR
+~~~~bash
+cd /home/fernando/cursos/opentelemetry/opentelemetry-curso-devopspro/app-telemetria
+
+helm install otel-collector open-telemetry/opentelemetry-collector --values k8s/values.yaml
+
+~~~~
+
 
 https://plataforma.devopspro.com.br/courses/af00ffe1-1d2f-4dce-9a19-780e59273907/2/1/42/conteudos?capitulo=42&conteudo=1232
 
