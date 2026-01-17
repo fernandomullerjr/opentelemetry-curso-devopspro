@@ -15,19 +15,21 @@ spec:
       - name: jaeger
         image: jaegertracing/all-in-one:latest
         ports:
-        - containerPort: 16686  # UI
-        - containerPort: 14250  # Model used by collector
-        - containerPort: 14268  # HTTP accept directly from clients
-        - containerPort: 6831   # Accept jaeger.thrift in compact Thrift protocol over UDP
+        - containerPort: 16686
+        - containerPort: 14250
+        - containerPort: 14268
+        - containerPort: 6831
           protocol: UDP
-        - containerPort: 6832   # Accept jaeger.thrift in binary Thrift protocol over UDP
+        - containerPort: 6832
           protocol: UDP
-        - containerPort: 9411   # Zipkin
-        - containerPort: 4317        
-        - containerPort: 4318
+        - containerPort: 9411
+        - containerPort: 4317  # OTLP gRPC
+        - containerPort: 4318  # OTLP HTTP
         env:
         - name: COLLECTOR_ZIPKIN_HOST_PORT
           value: ":9411"
+        - name: COLLECTOR_OTLP_ENABLED  # ✅ IMPORTANTE: Habilitar OTLP
+          value: "true"
 ---
 apiVersion: v1
 kind: Service
@@ -57,10 +59,10 @@ spec:
   - name: zipkin
     port: 9411
     targetPort: 9411
-  - name: http
+  - name: otlp-grpc  # ✅ Nome correto
     port: 4317
-    targetPort: 4317 
-  - name: grpc
+    targetPort: 4317
+  - name: otlp-http  # ✅ Nome correto
     port: 4318
-    targetPort: 4318     
+    targetPort: 4318
   type: ClusterIP

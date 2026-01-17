@@ -9,6 +9,10 @@ docker compose up --build
 
 ### COMANDOS ÚTEIS NO MINIKUBE:
 
+```bash
+minikube start --cpus=4 --memory=8192 --driver=docker
+```
+
 ~~~~BASH
 ## Abrir Dashboard do k8s
 minikube dashboard
@@ -29,6 +33,7 @@ minikube service grafana --url
 cd /home/fernando/cursos/opentelemetry/opentelemetry-curso-devopspro/app-telemetria
 
 kubectl apply -f k8s/ -R
+kubectl get pods -A
 ~~~~
 
 
@@ -191,3 +196,5 @@ docker-compose up --build
 
 
 - Seguir nas aulas adiante, conforme Markdown por aulas.
+
+
