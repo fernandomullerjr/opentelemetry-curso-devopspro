@@ -638,3 +638,274 @@ root@app-a-74f7747c78-jjv2l:/app# curl -v http://otel-collector-opentelemetry-co
 * Connection #0 to host otel-collector-opentelemetry-collector left intact
 405 method not allowed, supported: [POST]root@app-a-74f7747c78-jjv2l:/app# 
 root@app-a-74f7747c78-jjv2l:/app# 
+
+
+
+
+Perfeito! O endpoint está OK (405 é esperado para GET, ele aceita apenas POST). O problema é que **a aplicação não está enviando traces**!
+
+Baseado no código tracing.py, a aplicação **precisa ser chamada pelo endpoint correto** para gerar traces. Vamos testar:
+
+## 1. Verificar qual endpoint da aplicação gera traces
+
+```bash
+# Ver logs da aplicação quando você faz requisição
+kubectl logs -l app=app-a --tail=20 -f
+```
+
+Em outro terminal:
+
+```bash
+# Fazer requisição que deve gerar traces
+curl http://127.0.0.1/app-a
+
+# Se tiver um endpoint específico para testar
+curl http://127.0.0.1/teste
+curl http://127.0.0.1/health
+```
+
+## 2. O problema provável: Endpoint incorreto no OTLP_ENDPOINT
+
+No código tracing.py, veja esta linha:
+
+```python
+TRACE_OTLP_ENDPOINT = f"{OTLP_ENDPOINT}/v1/traces"
+```
+
+Mas no deploy.yaml está assim:
+
+```yaml
+OTLP_ENDPOINT: "http://otel-collector-opentelemetry-collector:4318"
+```
+
+Isso resulta em: `http://otel-collector-opentelemetry-collector:4318/v1/traces` ✅
+
+Isso está correto! Então o problema é outro...
+
+## 3. Teste: Enviar um trace manualmente para confirmar pipeline
+
+```bash
+# Dentro do pod app-a
+kubectl exec -it $(kubectl get pod -l app=app-a -o name) -- sh
+
+# Enviar um trace de teste
+curl -X POST http://otel-collector-opentelemetry-collector:4318/v1/traces \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resourceSpans": [{
+      "resource": {
+        "attributes": [{
+          "key": "service.name",
+          "value": {"stringValue": "test-service"}
+        }]
+      },
+      "scopeSpans": [{
+        "spans": [{
+          "name": "test-span",
+          "spanId": "0123456789abcdef",
+          "traceId": "0123456789abcdef0123456789abcdef",
+          "kind": 1,
+          "startTimeUnixNano": "1234567890000000000",
+          "endTimeUnixNano": "1234567891000000000"
+        }]
+      }]
+    }]
+  }'
+```
+
+## 4. Verificar se aparece no Jaeger
+
+Depois de enviar o trace de teste, vá no Jaeger UI e procure pelo serviço `test-service`.
+
+## 5. Se o trace de teste aparecer, o problema é na aplicação
+
+A aplicação pode não estar sendo instrumentada corretamente. Verifique:
+
+```bash
+# Ver todos os logs da aplicação desde o início
+kubectl logs -l app=app-a --tail=100 | grep -i "trace\|otel\|span"
+```
+
+**Qual é o endpoint que você está chamando? Você precisa chamar um endpoint que execute código instrumentado, não apenas retornar JSON simples.**
+
+
+
+
+
+
+
+
+
+
+
+root@app-a-74f7747c78-jjv2l:/app# 
+root@app-a-74f7747c78-jjv2l:/app# curl -X POST http://otel-collector-opentelemetry-collector:4318/v1/traces \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resourceSpans": [{
+      "resource": {
+        "attributes": [{
+          "key": "service.name",
+          "value": {"stringValue": "test-service"}
+        }]
+      },
+      "scopeSpans": [{
+        "spans": [{
+          "name": "test-span",
+          "spanId": "0123456789abcdef",
+          "traceId": "0123456789abcdef0123456789abcdef",
+          "kind": 1,
+          "startTimeUnixNano": "1234567890000000000",
+          "endTimeUnixNano": "1234567891000000000"
+        }]
+      }]
+    }]
+  }'
+{"partialSuccess":{}}root@app-a-74f7747c78-jjv2l:/app# 
+root@app-a-74f7747c78-jjv2l:/app# 
+root@app-a-74f7747c78-jjv2l:/app# 
+root@app-a-74f7747c78-jjv2l:/app# 
+root@app-a-74f7747c78-jjv2l:/app# date
+Sat Jan 17 20:41:34 UTC 2026
+root@app-a-74f7747c78-jjv2l:/app# 
+
+
+
+
+
+
+Excelente! O trace de teste foi enviado com sucesso (`{"partialSuccess":{}}`). Agora vamos verificar se ele chegou no Jaeger:
+
+## 1. Verificar logs do Collector (deve mostrar o trace)
+
+```bash
+kubectl logs -l app.kubernetes.io/name=opentelemetry-collector --tail=50 | grep -i "test-service\|test-span"
+```
+
+## 2. Acessar Jaeger UI e procurar o serviço
+
+```bash
+# Pegar URL do Jaeger
+minikube service jaeger --url
+
+# Ou fazer port-forward
+kubectl port-forward svc/jaeger 16686:16686
+```
+
+Acesse `http://localhost:16686` e procure pelo serviço **test-service**.
+
+## 3. Se o test-service aparecer no Jaeger, o problema É A APLICAÇÃO!
+
+A aplicação não está sendo instrumentada corretamente. Veja os logs dela:
+
+```bash
+# Ver logs completos do app-a
+kubectl logs -l app=app-a --tail=100
+
+# Procurar por erros de inicialização do OpenTelemetry
+kubectl logs -l app=app-a | grep -i "error\|fail\|exception"
+```
+
+## 4. Problema provável: A aplicação não está fazendo requisições HTTP instrumentadas
+
+Você está testando com `curl http://localhost:8000` que retorna apenas JSON. Isso **não gera traces distribuídos**!
+
+Você precisa chamar de **FORA** do cluster para a cadeia funcionar:
+
+```bash
+# Fora do pod, do seu terminal local:
+curl http://127.0.0.1/app-a
+
+# Isso deve fazer: Cliente -> app-a -> app-b -> app-c
+```
+
+## 5. Verificar se a aplicação está realmente instrumentada
+
+```bash
+# Ver o conteúdo do container para confirmar que tem OpenTelemetry
+kubectl exec -it $(kubectl get pod -l app=app-a -o name) -- ls -la /app/
+
+# Ver se tem arquivos Python de telemetria
+kubectl exec -it $(kubectl get pod -l app=app-a -o name) -- find /app -name "*otel*" -o -name "*telemetry*"
+```
+
+**Próximo passo crucial**: Chame `curl http://127.0.0.1/app-a` do seu terminal local e veja se aparecem traces no Jaeger. Se não aparecer, a aplicação não está instrumentada corretamente!
+
+
+
+**Não**, o `minikube tunnel` não é o problema! O problema é que **a aplicação não está instrumentada ou não está sendo inicializada corretamente**.
+
+O trace de teste funcionou, provando que o pipeline **Collector → Jaeger está OK**. O problema é na aplicação.
+
+## Verificações críticas:
+
+### 1. Ver logs da aplicação ao iniciar (procurar erros do OpenTelemetry)
+
+```bash
+kubectl logs -l app=app-a --tail=100 | grep -i "error\|fail\|exception"
+```
+
+### 2. Verificar se a aplicação tem os arquivos de instrumentação
+
+```bash
+kubectl exec -it $(kubectl get pod -l app=app-a -o name) -- ls -la /app/
+kubectl exec -it $(kubectl get pod -l app=app-a -o name) -- ls -la /app/otel/
+```
+
+### 3. Testar fazendo requisição EXTERNA (do seu terminal local)
+
+```bash
+# Acessar app-a que deve chamar app-b que chama app-c
+curl http://127.0.0.1:39253
+
+# Ver logs IMEDIATAMENTE após
+kubectl logs -l app=app-a --tail=20
+kubectl logs -l app=app-b --tail=20
+kubectl logs -l app=app-c --tail=20
+```
+
+### 4. Verificar se o código da aplicação está sendo executado
+
+A aplicação pode estar retornando apenas um JSON estático sem executar o código instrumentado. Olhe os logs:
+
+```bash
+# Ver todos os logs desde o início
+kubectl logs -l app=app-a --since=1h
+
+# Ver se há menção a "tracer", "span", "OpenTelemetry"
+kubectl logs -l app=app-a | grep -i "tracer\|span\|opentelemetry\|otlp"
+```
+
+### 5. Problema provável: A imagem está diferente do código local
+
+A imagem `fabriciosveronez/app-telemetria:v1` pode **NÃO ter** o código de instrumentação que você tem em `tracing.py`.
+
+**Solução**: Construir uma nova imagem com o código correto:
+
+```bash
+# Ir para o diretório da aplicação
+cd /home/fernando/cursos/opentelemetry/opentelemetry-curso-devopspro/app-telemetria
+
+# Build da imagem
+docker build -t minha-app-telemetria:v1 .
+
+# Carregar no Minikube
+minikube image load minha-app-telemetria:v1
+
+# Atualizar o deploy
+kubectl set image deployment/app-a app=minha-app-telemetria:v1
+kubectl set image deployment/app-b app=minha-app-telemetria:v1
+kubectl set image deployment/app-c app=minha-app-telemetria:v1
+```
+
+**Qual é a saída de `kubectl logs -l app=app-a`?** Isso vai revelar o problema!
+
+
+
+
+
+### 5. Problema provável: A imagem está diferente do código local
+
+A imagem `fabriciosveronez/app-telemetria:v1` pode **NÃO ter** o código de instrumentação que você tem em `tracing.py`.
+
+**Solução**: Construir uma nova imagem com o código correto
