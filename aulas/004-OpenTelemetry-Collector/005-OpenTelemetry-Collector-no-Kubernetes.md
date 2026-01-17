@@ -909,3 +909,40 @@ kubectl set image deployment/app-c app=minha-app-telemetria:v1
 A imagem `fabriciosveronez/app-telemetria:v1` pode **NÃO ter** o código de instrumentação que você tem em `tracing.py`.
 
 **Solução**: Construir uma nova imagem com o código correto
+
+
+
+- Comando para limpar ambiente no Kubernetes:
+
+~~~~bash
+cd /home/fernando/cursos/opentelemetry/opentelemetry-curso-devopspro/app-telemetria
+kubectl delete -f k8s/ -R
+kubectl get pods -A
+
+helm uninstall otel-collector open-telemetry/opentelemetry-collector
+
+
+> kubectl get pods -A
+NAMESPACE              NAME                                         READY   STATUS    RESTARTS      AGE
+kube-system            coredns-66bc5c9577-rmfg7                     1/1     Running   1 (87m ago)   6d4h
+kube-system            etcd-minikube                                1/1     Running   1 (87m ago)   6d4h
+kube-system            kube-apiserver-minikube                      1/1     Running   1 (87m ago)   6d4h
+kube-system            kube-controller-manager-minikube             1/1     Running   1 (87m ago)   6d4h
+kube-system            kube-proxy-ljs8m                             1/1     Running   1 (87m ago)   6d4h
+kube-system            kube-scheduler-minikube                      1/1     Running   1 (87m ago)   6d4h
+kube-system            storage-provisioner                          1/1     Running   3 (87m ago)   6d4h
+kubernetes-dashboard   dashboard-metrics-scraper-77bf4d6c4c-s646h   1/1     Running   1 (87m ago)   6d3h
+kubernetes-dashboard   kubernetes-dashboard-855c9754f9-5wv9d        1/1     Running   2 (87m ago)   6d3h
+> date
+Sat Jan 17 18:02:49 -03 2026
+
+~~~~
+
+
+
+
+### 5. Problema provável: A imagem está diferente do código local
+
+A imagem `fabriciosveronez/app-telemetria:v1` pode **NÃO ter** o código de instrumentação que você tem em `tracing.py`.
+
+**Solução**: Construir uma nova imagem com o código correto

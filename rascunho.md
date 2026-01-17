@@ -40,9 +40,19 @@ kubectl get pods -A
 ### Comando Helm para subir OTEL COLLECTOR
 ~~~~bash
 cd /home/fernando/cursos/opentelemetry/opentelemetry-curso-devopspro/app-telemetria
-
 helm install otel-collector open-telemetry/opentelemetry-collector --values k8s/values.yaml
+~~~~
 
+
+### Remover o ambiente
+
+- Comando para limpar ambiente no Kubernetes:
+
+~~~~bash
+cd /home/fernando/cursos/opentelemetry/opentelemetry-curso-devopspro/app-telemetria
+kubectl delete -f k8s/ -R
+kubectl get pods -A
+helm uninstall otel-collector open-telemetry/opentelemetry-collector
 ~~~~
 
 
